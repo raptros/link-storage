@@ -1,0 +1,23 @@
+<document>
+    <section name="one">
+        <link title="link" url="http://example.com"/>
+        <section name="again">
+            <link title="A Link" url="http://example.com"/>
+            <link title="Another Link" url="http://www.example.com/"/>
+        </section>
+    </section>
+    <section name="two">
+        <sequence>
+            <link title="p1" url="http://example.com/1"/>
+            <link title="p2" url="http://example.com/2"/>
+            <link title="p3" url="http://example.com/3"/>
+            <link title="p4" url="http://example.com/4"/>
+        </sequence>
+        <sequence>
+            <link title="p1" url="http://example.com/1"/>
+            <link title="p2" url="http://example.com/2"/>
+            <link title="p3" url="http://example.com/3"/>
+            <link title="p4" url="http://example.com/4"/>
+        </sequence>
+    </section>
+</document>

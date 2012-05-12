@@ -1,9 +1,12 @@
 package local.nodens.linkstorage
+import browser._
+import layout._
+
 import android.app._
 import android.os.Bundle
 import android.view._
 import android.widget._
-import android.os.Bundle
+import android.content.res.Resources
 
 import FragmentManager.OnBackStackChangedListener
 import local.nodens.linkmodel._
@@ -11,20 +14,33 @@ import android.util.Log
 
 import ActionBar.OnNavigationListener
 
-class LinkStorageActivity extends Activity with SectionBrowserListener 
-with LinkBrowserListener with OnBackStackChangedListener {
-  var doc:Document = Document()
+class LinkStorageActivity extends Activity 
+with SectionBrowserListener with LinkBrowserListener with LinkSeqBrowserListener
+with OnBackStackChangedListener {
+
+  private var mDoc:Document = Document()
   var layoutMgr:Option[LayoutMgr] = None
+
+  //todo: make this look up in settings.
+  //and also in saved instance state.
+  def docLocation:String = {
+    getResources.getString(R.string.test_doc_loc)
+  }
+
+  def doc:Document = mDoc
+  def doc_=(newDoc:Document):Unit = {
+    mDoc = newDoc
+    layoutMgr foreach (_.setDoc(mDoc))
+  }
 
   /** Called when the activity is first created. */
   override def onCreate(savedInstanceState:Bundle) = {
     super.onCreate(savedInstanceState)
-    //setContentView(R.layout.main) // let's avoid using this if possible. it's a PITA
+    val loc = docLocation
     getFragmentManager.addOnBackStackChangedListener(this)
     layoutMgr = Some(getLayout)
-    //TODO get the document from somewhere.
-    doc = Document(Section("one", ("link1" #@# "http://example.com/")))
-    layoutMgr map (_.setup(doc, Nil))
+    layoutMgr map (_.prepareView) foreach (setContentView(_))
+    DocLoader.load(loc, this)
   }
 
   def doFragTrans[U](f: FragmentTransaction => U):U = {
@@ -45,27 +61,17 @@ with LinkBrowserListener with OnBackStackChangedListener {
   /**
    * create instance of the appropriate layout.
    */
-  def establishLayout(layoutBig:Boolean, layoutSidepanes:Boolean):LayoutMgr = new TabbedSection(this) /*{ //TODO
+  def establishLayout(layoutBig:Boolean, layoutSidepanes:Boolean):LayoutMgr = new SubdispSection(this) /*{ //TODO
     if (!layoutBig) establishTabLayout
     else if (!layoutSidepanes) establishVerticalLayout
     else establishPanesLayout
   }*/
 
-  //sets up a tab-based layout
-  def establishTabLayout:LayoutMgr = {
-    new TabbedSection(this) 
-  }
-  def establishVerticalLayout ={  }
-  def establishPanesLayout = {  }
-
   def onSectionSelect(secName:String, path:List[String]):Unit = {
-    doFragTrans {
-      ft => {
-        ft.detach(getFragmentManager.findFragmentById(android.R.id.content))
-        ft.addToBackStack(null)
-      }
-    }
-    layoutMgr map (_.setup(doc, path :+ secName))
+    getActionBar.setDisplayHomeAsUpEnabled(true)
+    val newPath = path :+ secName
+    val section = (doc /~ newPath).current.asInstanceOf[Section]
+    layoutMgr foreach (_.pushSection(section, newPath))
   }
 
   def onLinkSelect(pos:Int, path:List[String]):Unit = {
@@ -74,33 +80,37 @@ with LinkBrowserListener with OnBackStackChangedListener {
     }
   }
 
+  def onLinkSeqItemSelect(seq:Int, item:Int, path:List[String]):Unit = {
+    ((doc /~ path) #@#@@(seq, item)) map {
+      link => Log.i(TAG, link.toString)
+    }
+  }
+
   def onBackStackChanged = {
     if (getFragmentManager.getBackStackEntryCount == 0)
-      layoutMgr map (_ tearDown)
-    else {
-      getActionBar.setSelectedNavigationItem(
-        getFragmentManager.findFragmentById(android.R.id.content) match {
-          case frag:SectionBrowser => 0
-          case frag:LinkBrowser => 1
-          case frag:LinkSeqBrowser => 2
-        }
-      )
-    }
+      getActionBar.setDisplayHomeAsUpEnabled(false)
+    else { }
+  }
+
+  def goBack() = {
+    getFragmentManager.popBackStack()
+    layoutMgr foreach {_.popSection()}
   }
 
   override def onOptionsItemSelected(item:MenuItem) = {
     item.getItemId match {
       case android.R.id.home => {
-        getFragmentManager.popBackStack
-        getFragmentManager.popBackStack
+        goBack()
         true
       }
       case _ => super.onOptionsItemSelected(item)
     }
   }
 
-  override def onBackPressed = {
-    getFragmentManager.popBackStack
-    getFragmentManager.popBackStack
+  override def onBackPressed() = {
+    if (getFragmentManager.getBackStackEntryCount > 0)
+      goBack()
+    else
+      super.onBackPressed()
   }
 }
