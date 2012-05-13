@@ -89,20 +89,20 @@ class LabelFrag(val context:Context, val callback:OnClickListener, val text:Stri
 class SubdispSection(activity:LinkStorageActivity) extends LayoutMgr(activity) {
   val browseID:Int = R.id.subdisp_browse
   val controlID:Int = R.id.subdisp_control
-  val inflater = LayoutInflater.from(activity)
-  val fragMan = activity.getFragmentManager
 
-  object LinkListener extends OnClickListener { def onClick(v:View) =  pushSubFrag(oLinkFrag, linkLabelFrag) }
-  object LSListener extends OnClickListener { def onClick(v:View) =  pushSubFrag(oLSFrag, lsLabelFrag) }
-  object GoBackListener extends OnClickListener { def onClick(v:View) = activity.goBack() }
+  object LinkListener extends OnClickListener {
+    def onClick(v:View) =  pushSubFrag(current.oLinks, linkLabelFrag) 
+  }
+  object LSListener extends OnClickListener {
+    def onClick(v:View) =  pushSubFrag(current.oLS, lsLabelFrag) 
+  }
+  object GoBackListener extends OnClickListener {
+    def onClick(v:View) = activity.goBack() 
+  }
 
   val controlFrag = new ControlFragment(LinkListener, LSListener)
   val linkLabelFrag = new LabelFrag(activity, GoBackListener, "Links")
   val lsLabelFrag = new LabelFrag(activity, GoBackListener, "Link Seqs")
-
-  var oLinkFrag:Option[Fragment] = None
-  var oLSFrag:Option[Fragment] = None
-
 
   def pushSubFrag(oFrag:Option[Fragment], newFrag:Fragment):Unit = { 
     oFrag foreach {
@@ -120,19 +120,7 @@ class SubdispSection(activity:LinkStorageActivity) extends LayoutMgr(activity) {
 
   def addDoc(docFrag:Fragment):Unit = activity.doFragTrans (_.add(browseID, docFrag))
 
-  def ensureFrag(ft:FragmentTransaction, frag:Fragment, id:Int) = {
-    if (frag.isAdded) {
-      if (frag.isDetached) ft.attach(frag) else { }
-    } else {
-      val present = fragMan.findFragmentById(id)
-      if (present == null) { } else ft.remove(present)
-      ft.add(id, frag)
-    }
-  }
-
   def addAll(secFrag:Fragment, linkFrag:Fragment, lsFrag:Fragment):Unit = {
-    oLinkFrag = Some(linkFrag)
-    oLSFrag = Some(lsFrag)
     activity.doFragTrans {
       ft => {
         ensureFrag(ft, secFrag, browseID)
@@ -142,6 +130,6 @@ class SubdispSection(activity:LinkStorageActivity) extends LayoutMgr(activity) {
     }
   }
 
-  def sectionContentsAre(links:Boolean, linkSeqs:Boolean):Unit = controlFrag.hasContent(links, linkSeqs)
+  def examineCurrent():Unit = controlFrag.hasContent(current.hasLinks, current.hasLinkSeqs)
 }
 

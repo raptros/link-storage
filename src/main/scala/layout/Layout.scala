@@ -11,58 +11,75 @@ import local.nodens.linkmodel._
 import android.content._
 
 import scala.collection.mutable.Stack
+
+class SecStackItem(
+  val hasSections:Boolean,
+  val hasLinks:Boolean,
+  val hasLinkSeqs:Boolean,
+  val doc:Document,
+  val path:List[String],
+  val oDoc:Option[Fragment],
+  val oSec:Option[Fragment],
+  val oLinks:Option[Fragment],
+  val oLS:Option[Fragment])
+
+object SecStackItem {
+  def fromDoc(doc:Document) = new SecStackItem(
+    doc.sections.isEmpty, false, false,
+    doc, Nil, Some(SectionBrowser(doc)),
+    None, None, None)
+
+  def fromSection(doc:Document, sec:Section, path:List[String]) = new SecStackItem(
+    !sec.sections.isEmpty, !sec.links.isEmpty, !sec.linkSeqs.isEmpty,
+    doc, path, None,
+    Some(SectionBrowser(sec, path)),
+    Some(LinkBrowser(sec, path)),
+    Some(LinkSeqBrowser(sec, path)))
+}
+
 /**
- * When one of these is created, it will set up the layout of the activity.
- * @todo implement callbacks for section browser fragment to push to new sections.
-
-
- ok, new plan. the subclasses create a view heirarchy with slots for each of the three fragments.
- This class will interact with the activity to carry out the fragment transaction;
- it will pass the fragment and transaction to the subclass, telling it to deal with it,
- then commit once done.
-
- it will add into the view heirarchy using specified ids.
-
  */
-abstract class LayoutMgr(val activity:LinkStorageActivity) 
-extends Fragment {
+abstract class LayoutMgr(val activity:LinkStorageActivity) {
   val actionBar = activity.getActionBar
-  val paths = Stack.empty[List[String]]
+  val inflater = LayoutInflater.from(activity)
+  val fragMan = activity.getFragmentManager
+
+  val browse = Stack.empty[SecStackItem]
   var oDoc:Option[Document] = None
 
   def setDoc(doc:Document):Unit = {
-    addDoc(SectionBrowser(doc))
-    oDoc = Some(doc)
+    browse.push(SecStackItem.fromDoc(doc))
+    addDoc(current.oDoc.get)
   }
 
+  //because of the way the backstack is set up,
+  //it will go empty before the base of browse is popped.
+  def current:SecStackItem = browse top
+
   def pushSection(section:Section, path:List[String]):Unit = {
-    paths.push(path)
-    addAll(SectionBrowser(section, path),
-      LinkBrowser(section, path),
-      LinkSeqBrowser(section, path))
-    examineSection(section)
+    browse.push(SecStackItem.fromSection(current.doc, section, path))
+    addAll(current.oSec.get, current.oLinks.get, current.oLS.get)
+    examineCurrent()
   }
 
   def popSection():Unit = {
-    paths.lastOption.flatMap {
-      top => oDoc map (_ /~ (paths top))
-    } foreach {
-      case (sec:Section) => examineSection(sec)
-      case _ => { }
+    browse.pop()
+    examineCurrent()
+  }
+
+  def ensureFrag(ft:FragmentTransaction, frag:Fragment, id:Int) = {
+    if (frag.isAdded) {
+      if (frag.isDetached) ft.attach(frag) else { }
+    } else {
+      val present = fragMan.findFragmentById(id)
+      if (present == null) { } else ft.remove(present)
+      ft.add(id, frag)
     }
   }
 
-  def examineSection(section:Section):Unit = {
-    val links = !section.links.isEmpty
-    val linkSeqs = !section.linkSeqs.isEmpty
-    Log.d(TAG, "links: " + links + " linkSeqs: " + linkSeqs)
-    sectionContentsAre(links, linkSeqs)
-  }
-
+  def examineCurrent():Unit
   def prepareView:View
   def addDoc(docFrag:Fragment):Unit
   def addAll(secFrag:Fragment, linkFrag:Fragment, lsFrag:Fragment):Unit
-  def sectionContentsAre(links:Boolean, linkSeqs:Boolean):Unit
-
 }
 

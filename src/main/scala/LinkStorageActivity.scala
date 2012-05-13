@@ -23,8 +23,10 @@ with OnBackStackChangedListener {
 
   //todo: make this look up in settings.
   //and also in saved instance state.
-  def docLocation:String = {
-    getResources.getString(R.string.test_doc_loc)
+  def loadDoc():Unit = {
+    val localDoc = getResources.getString(R.string.test_doc_loc)
+    val staticDoc = R.raw.testfile
+    DocLoader.loadRaw(staticDoc, this)
   }
 
   def doc:Document = mDoc
@@ -36,11 +38,11 @@ with OnBackStackChangedListener {
   /** Called when the activity is first created. */
   override def onCreate(savedInstanceState:Bundle) = {
     super.onCreate(savedInstanceState)
-    val loc = docLocation
+    //val loc = docLocation
     getFragmentManager.addOnBackStackChangedListener(this)
     layoutMgr = Some(getLayout)
     layoutMgr map (_.prepareView) foreach (setContentView(_))
-    DocLoader.load(loc, this)
+    loadDoc()
   }
 
   def doFragTrans[U](f: FragmentTransaction => U):U = {
@@ -61,7 +63,7 @@ with OnBackStackChangedListener {
   /**
    * create instance of the appropriate layout.
    */
-  def establishLayout(layoutBig:Boolean, layoutSidepanes:Boolean):LayoutMgr = new SubdispSection(this) /*{ //TODO
+  def establishLayout(layoutBig:Boolean, layoutSidepanes:Boolean):LayoutMgr = new TabLayout2(this) /*{ //TODO
     if (!layoutBig) establishTabLayout
     else if (!layoutSidepanes) establishVerticalLayout
     else establishPanesLayout
@@ -93,8 +95,11 @@ with OnBackStackChangedListener {
   }
 
   def goBack() = {
-    getFragmentManager.popBackStack()
-    layoutMgr foreach {_.popSection()}
+    if (getFragmentManager.getBackStackEntryCount > 0) {
+      getFragmentManager.popBackStack()
+      layoutMgr foreach {_.popSection()}
+    }
+    else { }
   }
 
   override def onOptionsItemSelected(item:MenuItem) = {
