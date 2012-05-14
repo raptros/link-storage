@@ -6,6 +6,7 @@ import android.view._
 import android.widget._
 import android.content.Context
 
+import android.util.Log
 import scalaz._
 import Scalaz._
 import com.commonsware.cwac.merge.MergeAdapter
@@ -40,13 +41,45 @@ class AdaptLink(val context:Context, links:Seq[Link]) extends BaseAdapter {
 
 
 abstract class MergeAdapterWithIndices extends MergeAdapter {
+  import com.commonsware.cwac.sacklist.SackOfViewsAdapter
+  //gets the index of the adapter containing the passed in pos
+  //in the list of adapters.
+  import scala.collection.mutable.ArrayBuffer
+  import scala.collection.mutable.Map
+  val lowers = ArrayBuffer.empty[Int]
+  val uppers = ArrayBuffer.empty[Int] // the first upper is the size of the first element
+  val pureAdapterToPieceIndex = ArrayBuffer.empty[Int]
+  val pieceIndexToPureAdapter = Map.empty[Int, Int]
+
+  override def addAdapter(adapter:ListAdapter):Unit = {
+    super.addAdapter(adapter)
+    val count = adapter.getCount
+    val lastUpper = uppers.lastOption getOrElse 0
+    lowers.append(lastUpper)
+    uppers.append(count + lastUpper)
+    if (adapter.isInstanceOf[SackOfViewsAdapter]) { }
+    else {
+      pureAdapterToPieceIndex.append(pieces.size - 1)
+      pieceIndexToPureAdapter.put(pieces.size -1, pureAdapterToPieceIndex.size - 1)
+    }
+  }
+
+  @EnhanceStrings
   def getAdapterPos(pos:Int):Int = {
-    val offsets = pieces.map(_.getCount).scanLeft(0)(_+_).sliding(2)
-    offsets.map {
-      case Seq(l, u) => (l, u)
-    }.zipWithIndex.filter {
+    val bounds = lowers zip uppers
+    val containing = bounds.zipWithIndex.filter {
       case (b, idx) => (pos >= b._1) && pos < b._2
-    }.toList.head._2
+    }
+    val pieceIndex = containing.toList.head._2
+    val aPos = (pieceIndexToPureAdapter get pieceIndex).get
+    aPos
+  }
+
+  @EnhanceStrings
+  def getSubAdapterPosition(pureAdapter:Int, pos:Int) = {
+    val pieceIndex = pureAdapterToPieceIndex(pureAdapter)
+    val fPos = pos - lowers(pieceIndex) 
+    fPos
   }
 }
 

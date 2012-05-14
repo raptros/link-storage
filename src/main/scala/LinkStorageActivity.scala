@@ -96,18 +96,21 @@ class LinkStorageActivity extends Activity {
   def getLayout:LayoutMgr = {
     val resources = getResources
     val layoutBig = resources.getBoolean(R.bool.layout_big)
-    val layoutSidepanes = resources.getBoolean(R.bool.layout_sidepanes)
-    establishLayout(layoutBig, layoutSidepanes)
+    val layoutHorizontal = resources.getBoolean(R.bool.layout_horizontal)
+    establishLayout(layoutBig, layoutHorizontal)
   }
 
   /**
    * create instance of the appropriate layout.
    */
-  def establishLayout(layoutBig:Boolean, layoutSidepanes:Boolean):LayoutMgr = new TabLayout2(this) /*{ //TODO
-    if (!layoutBig) establishTabLayout
-    else if (!layoutSidepanes) establishVerticalLayout
-    else establishPanesLayout
-  }*/
+  def establishLayout(layoutBig:Boolean, layoutHorizontal:Boolean):LayoutMgr = {
+    if (!layoutBig) 
+      new TabLayout2(this) 
+    else if (!layoutHorizontal) 
+      new VerticalLarge(this) 
+    else 
+      new HorizontalLarge(this)
+  }
 
   def onSectionSelect(secName:String):Unit = {
     Log.d(TAG, "on section select: #secName in #current.path.toString")
@@ -115,14 +118,14 @@ class LinkStorageActivity extends Activity {
   }
 
   def onLinkSelect(pos:Int):Unit = {
-    ((doc /~ current.path) #@ pos) map {
-      link => Log.i(TAG, link.toString)
+    ((doc /~ current.path) #@ pos) foreach {
+      link => Log.i(TAG, "selected link at #pos: #link.toString" )
     }
   }
 
-  def onLinkSeqItemSelect(seq:Int, item:Int):Unit = {
-    ((doc /~ current.path) #@#@@(seq, item)) map {
-      link => Log.i(TAG, link.toString)
+  def onLinkSeqItemSelect(item:Int, seq:Int):Unit = {
+    ((doc /~ current.path) #@#@@(item, seq)) foreach {
+      link => Log.i(TAG, "selected in #seq item #item: #link.toString")
     }
   }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <bool name="layout_big">false</bool>
-    <bool name="layout_sidepanes">false</bool>
+    <bool name="layout_horizontal">false</bool>
 </resources>
