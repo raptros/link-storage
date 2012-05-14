@@ -29,5 +29,7 @@ abstract class LayoutMgr(val activity:LinkStorageActivity) {
   def prepareView:View
   def displayDoc(doc:Document):Unit
   def displaySection(sec:SecStackItem):Unit
+  def restoreInstanceState(sis:Option[Bundle]):Unit
+  def onSaveInstanceState(outSIS:Bundle):Unit
 }
 

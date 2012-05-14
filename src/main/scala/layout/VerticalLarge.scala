@@ -21,4 +21,7 @@ class VerticalLarge(activity:LinkStorageActivity) extends LayoutMgr(activity) {
   }
   def displayDoc(doc:Document):Unit = { } 
   def displaySection(sec:SecStackItem):Unit = { }
+
+  def restoreInstanceState(sis:Option[Bundle]):Unit = { }
+  def onSaveInstanceState(outSIS:Bundle):Unit = { }
 }

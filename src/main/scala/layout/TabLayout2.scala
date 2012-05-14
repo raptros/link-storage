@@ -16,6 +16,7 @@ import Scalaz._
 
 class TabLayout2(activity:LinkStorageActivity) extends LayoutMgr(activity) {
   val content = android.R.id.content
+  val kSelectedTab = "tab_layout2_selected_tab"
 
   val view = new ListView(activity)
 
@@ -44,6 +45,18 @@ class TabLayout2(activity:LinkStorageActivity) extends LayoutMgr(activity) {
 
   def prepareView:View = {
     view
+  }
+
+  def restoreInstanceState(sis:Option[Bundle]):Unit =  for {
+    bundle <- sis
+    tabTag <-Option(bundle getString kSelectedTab)
+    index <- (0 until actionBar.getTabCount)
+    tabItem = actionBar.getTabAt(index)
+    tab <- (tabItem.getText.toString == tabTag).option(tabItem)
+  } (actionBar.selectTab(tab))
+
+  def onSaveInstanceState(outSIS:Bundle):Unit = Option(actionBar.getSelectedTab) foreach{
+    tab => outSIS.putString(kSelectedTab, tab.getText.toString)
   }
 
   def displayDoc(doc:Document) = {
