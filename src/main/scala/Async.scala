@@ -31,7 +31,7 @@ trait GetsDir {
 }
 
 //abstract loader puts the loaded document into the activity inside display thread
-class AbstractLoader(val activity:Activity) extends AsyncTask[AnyRef, Void, Loaded]
+abstract class AbstractLoader(val activity:LinkStorageActivity) extends AsyncTask[AnyRef, Void, Loaded]
 with GetsArg with ParsesFile with PutsDoc { override protected def onPostExecute(r:Loaded) = put(r) }
 
 //load doc from the sdcard

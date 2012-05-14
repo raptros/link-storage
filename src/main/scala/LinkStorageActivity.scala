@@ -12,14 +12,42 @@ import FragmentManager.OnBackStackChangedListener
 import local.nodens.linkmodel._
 import android.util.Log
 
+import scala.collection.mutable.Stack
 import ActionBar.OnNavigationListener
 
-class LinkStorageActivity extends Activity 
-with SectionBrowserListener with LinkBrowserListener with LinkSeqBrowserListener
-with OnBackStackChangedListener {
 
-  private var mDoc:Document = Document()
+case class SecStackItem(
+  hasSections:Boolean,
+  hasLinks:Boolean,
+  hasLinkSeqs:Boolean,
+  doc:Document,
+  path:List[String])
+
+object SecStackItem {
+  def fromDoc(doc:Document) = new SecStackItem(
+    doc.sections.isEmpty, false, false, doc, Nil)
+
+  def fromSection(doc:Document, sec:Section, path:List[String]) = new SecStackItem(
+    !sec.sections.isEmpty, !sec.links.isEmpty, !sec.linkSeqs.isEmpty,
+    doc, path)
+
+  def fromManipulator(manip:Manipulator):SecStackItem = manip.current match {
+    case (doc:Document) => fromDoc(doc)
+    case (sec:Section) => {
+      fromSection(manip.getDoc, sec, manip.path.tail)
+    }
+  }
+}
+
+class LinkStorageActivity extends Activity  {
+
   var layoutMgr:Option[LayoutMgr] = None
+  private var mDoc:Document = Document()
+
+  private val browse = Stack.empty[SecStackItem]
+
+  def current = browse.headOption getOrElse(SecStackItem.fromDoc(mDoc))
+
 
   //todo: make this look up in settings.
   //and also in saved instance state.
@@ -32,25 +60,24 @@ with OnBackStackChangedListener {
   def doc:Document = mDoc
   def doc_=(newDoc:Document):Unit = {
     mDoc = newDoc
-    layoutMgr foreach (_.setDoc(mDoc))
+    browse.clear()
+    layoutMgr foreach (_.display(current))
   }
 
   /** Called when the activity is first created. */
   override def onCreate(savedInstanceState:Bundle) = {
     super.onCreate(savedInstanceState)
     //val loc = docLocation
-    getFragmentManager.addOnBackStackChangedListener(this)
+    //getFragmentManager.addOnBackStackChangedListener(this)
     layoutMgr = Some(getLayout)
     layoutMgr map (_.prepareView) foreach (setContentView(_))
     loadDoc()
   }
 
-  def doFragTrans[U](f: FragmentTransaction => U):U = {
-    val fragMan = getFragmentManager
-    val fragTrans = fragMan.beginTransaction
-    val res = f(fragTrans)
-    fragTrans.commit
-    res
+  def pushSection(path:List[String]) = {
+    getActionBar.setDisplayHomeAsUpEnabled(true)
+    browse.push(SecStackItem.fromManipulator(doc /~ path))
+    layoutMgr foreach (_.display(current))
   }
 
   def getLayout:LayoutMgr = {
@@ -69,37 +96,28 @@ with OnBackStackChangedListener {
     else establishPanesLayout
   }*/
 
-  def onSectionSelect(secName:String, path:List[String]):Unit = {
-    getActionBar.setDisplayHomeAsUpEnabled(true)
-    val newPath = path :+ secName
-    val section = (doc /~ newPath).current.asInstanceOf[Section]
-    layoutMgr foreach (_.pushSection(section, newPath))
+  def onSectionSelect(secName:String):Unit = {
+    Log.d(TAG, "on section select: " + secName + " in " + current.path.toString)
+    pushSection(current.path :+ secName)
   }
 
-  def onLinkSelect(pos:Int, path:List[String]):Unit = {
-    ((doc /~ path) #@ pos) map {
+  def onLinkSelect(pos:Int):Unit = {
+    ((doc /~ current.path) #@ pos) map {
       link => Log.i(TAG, link.toString)
     }
   }
 
-  def onLinkSeqItemSelect(seq:Int, item:Int, path:List[String]):Unit = {
-    ((doc /~ path) #@#@@(seq, item)) map {
+  def onLinkSeqItemSelect(seq:Int, item:Int):Unit = {
+    ((doc /~ current.path) #@#@@(seq, item)) map {
       link => Log.i(TAG, link.toString)
     }
   }
 
-  def onBackStackChanged = {
-    if (getFragmentManager.getBackStackEntryCount == 0)
-      getActionBar.setDisplayHomeAsUpEnabled(false)
-    else { }
-  }
-
-  def goBack() = {
-    if (getFragmentManager.getBackStackEntryCount > 0) {
-      getFragmentManager.popBackStack()
-      layoutMgr foreach {_.popSection()}
-    }
-    else { }
+  def goBack() = if (browse nonEmpty) {
+    browse.pop()
+    layoutMgr foreach (_.display(current))
+    if (browse nonEmpty) { }
+    else getActionBar.setDisplayHomeAsUpEnabled(false)
   }
 
   override def onOptionsItemSelected(item:MenuItem) = {
@@ -112,10 +130,5 @@ with OnBackStackChangedListener {
     }
   }
 
-  override def onBackPressed() = {
-    if (getFragmentManager.getBackStackEntryCount > 0)
-      goBack()
-    else
-      super.onBackPressed()
-  }
+  override def onBackPressed() = if (browse nonEmpty) goBack() else super.onBackPressed()
 }

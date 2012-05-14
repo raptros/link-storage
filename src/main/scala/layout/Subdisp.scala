@@ -86,7 +86,7 @@ class LabelFrag(val context:Context, val callback:OnClickListener, val text:Stri
  * A layout that places the section on the screen, and provides access to the
  * links and link seqs using buttons on the bottom of the screen.
  */
-class SubdispSection(activity:LinkStorageActivity) extends LayoutMgr(activity) {
+/*class SubdispSection(activity:LinkStorageActivity) extends LayoutMgr(activity) {
   val browseID:Int = R.id.subdisp_browse
   val controlID:Int = R.id.subdisp_control
 
@@ -132,4 +132,4 @@ class SubdispSection(activity:LinkStorageActivity) extends LayoutMgr(activity) {
 
   def examineCurrent():Unit = controlFrag.hasContent(current.hasLinks, current.hasLinkSeqs)
 }
-
+*/
