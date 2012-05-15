@@ -65,3 +65,14 @@ object SectionItem {
     si.update(section)
   }
 }
+
+class LLSHeaderItem(val context:Context, attrSet:AttributeSet) extends TextView(context, attrSet) 
+
+object LLSHeaderItem {
+  def apply(context:Context, title:String) = {
+    val inflater = LayoutInflater.from(context)
+    val lhi = inflater.inflate(R.layout.lls_header_item, null).asInstanceOf[LLSHeaderItem]
+    lhi.setText(title)
+    lhi
+  }
+}

@@ -5,13 +5,32 @@
     android:showDividers="middle"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <FrameLayout android:id="@+id/_browse"
+    <ListView android:id="@+id/vertical_lls_area"
+        android:divider="#FF000000"
+        android:dividerHeight="1dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
         android:layout_width="match_parent"
-        android:layout_height="0dip"
-        android:layout_weight="2.0"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.0"
+        android:headerDividersEnabled="true"
+        android:footerDividersEnabled="true"
         />
-    <FrameLayout android:id="@+id/subdisp_control"
+    <FrameLayout
+        android:layout_gravity="top"
         android:layout_weight="0.0"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content">
+        <ListView android:id="@+id/vertical_sec_area"
+            android:divider="#FF000000"
+            android:dividerHeight="1dp"
+            android:background="#FFBBBBBB"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+        <View android:background="@drawable/vertical_sec_bg"
+            android:layout_height="8dp"
+            android:layout_width="match_parent"/>
+    </FrameLayout>
 </LinearLayout>
