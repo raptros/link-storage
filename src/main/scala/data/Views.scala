@@ -1,4 +1,5 @@
-package local.nodens.linkstorage
+package local.nodens.linkstorage.data
+import local.nodens.linkstorage._
 import local.nodens.linkmodel._
 
 import android.app._

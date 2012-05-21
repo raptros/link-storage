@@ -3,7 +3,7 @@ package local.nodens
 package object linkstorage {
   import scalaz._
   import Scalaz._
-  import local.nodens.linkmodel.Document
+  import local.nodens.linkmodel._
 
   val TAG = "LinkStorageActivity"
 
@@ -36,4 +36,30 @@ package object linkstorage {
     }
   }
   implicit def bundle2StringListBundle(bundle:Bundle):StringListBundle = new StringListBundle(bundle)
+
+  type FileFailure = String
+  trait HasLSA { def activity:LinkStorageActivity }
+
+  case class SecStackItem(
+    hasSections:Boolean,
+    hasLinks:Boolean,
+    hasLinkSeqs:Boolean,
+    doc:Document,
+    path:List[String])
+
+  object SecStackItem {
+    def fromDoc(doc:Document) = new SecStackItem(
+      doc.sections.isEmpty, false, false, doc, Nil)
+
+    def fromSection(doc:Document, sec:Section, path:List[String]) = new SecStackItem(
+      !sec.sections.isEmpty, !sec.links.isEmpty, !sec.linkSeqs.isEmpty,
+      doc, path)
+
+    def fromManipulator(manip:Manipulator):SecStackItem = manip.current match {
+      case (doc:Document) => fromDoc(doc)
+      case (sec:Section) => {
+        fromSection(manip.getDoc, sec, manip.path.tail)
+      }
+    }
+  }
 }

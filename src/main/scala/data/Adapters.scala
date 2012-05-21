@@ -1,15 +1,20 @@
 package local.nodens.linkstorage.data
 import local.nodens.linkstorage._
 import local.nodens.linkmodel._
+
 import scala.collection.JavaConversions._
+
 import android.view._
 import android.widget._
 import android.content.Context
-
 import android.util.Log
+
+import AdapterView.OnItemClickListener
+
+import com.commonsware.cwac.merge.MergeAdapter
+
 import scalaz._
 import Scalaz._
-import com.commonsware.cwac.merge.MergeAdapter
 
 /**
  * Adapter for displaying section lists.
@@ -97,3 +102,30 @@ class AdaptLinkSeq(val context:Context, linkSeqs:Seq[LinkSeq]) extends MergeAdap
     }
   }
 }
+
+class SplitAdapter[A <: ListAdapter, B <: ListAdapter](
+  upperHeader:View, val upperAdapter:A,
+  lowerHeader:View, val lowerAdapter:B) extends MergeAdapterWithIndices {
+
+  if (upperAdapter.getCount == 0) { } else addView(upperHeader)
+  addAdapter(upperAdapter)
+  if (lowerAdapter.getCount == 0) { } else addView(lowerHeader)
+  addAdapter(lowerAdapter)
+}
+
+class SplitAdapterListener[A <: ListAdapter, B <: ListAdapter](
+  adapter:SplitAdapter[A, B],
+  upperCallback: (A, Int) => Unit,
+  lowerCallback: (B, Int) => Unit) extends OnItemClickListener {
+  
+  def onItemClick(parent:AdapterView[_], view:View, position:Int, id:Long) = {
+    val which = adapter.getAdapterPos(position)
+    val pos = adapter.getSubAdapterPosition(which, position)
+    which match {
+      case 0 => upperCallback(adapter.upperAdapter, pos)
+      case 1 => lowerCallback(adapter.lowerAdapter, pos)
+      case _ => Log.e(TAG, "shouldn't be possible to have non-zero-one in SplitAdapterListener")
+    }
+  }
+}
+

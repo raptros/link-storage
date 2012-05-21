@@ -1,6 +1,6 @@
 package local.nodens.linkstorage.layout
 import local.nodens.linkstorage._
-import local.nodens.linkstorage.data._
+import data._
 
 import android.app._
 import android.os.Bundle
@@ -14,34 +14,6 @@ import AdapterView.OnItemClickListener
 
 import scalaz._
 import Scalaz._
-
-import com.commonsware.cwac.merge.MergeAdapter
-
-class SplitAdapter[A <: ListAdapter, B <: ListAdapter](
-  upperHeader:View, val upperAdapter:A,
-  lowerHeader:View, val lowerAdapter:B) extends MergeAdapterWithIndices {
-
-  if (upperAdapter.getCount == 0) { } else addView(upperHeader)
-  addAdapter(upperAdapter)
-  if (lowerAdapter.getCount == 0) { } else addView(lowerHeader)
-  addAdapter(lowerAdapter)
-}
-
-class SplitAdapterListener[A <: ListAdapter, B <: ListAdapter](
-  adapter:SplitAdapter[A, B],
-  upperCallback: (A, Int) => Unit,
-  lowerCallback: (B, Int) => Unit) extends OnItemClickListener {
-  
-  def onItemClick(parent:AdapterView[_], view:View, position:Int, id:Long) = {
-    val which = adapter.getAdapterPos(position)
-    val pos = adapter.getSubAdapterPosition(which, position)
-    which match {
-      case 0 => upperCallback(adapter.upperAdapter, pos)
-      case 1 => lowerCallback(adapter.lowerAdapter, pos)
-      case _ => Log.e(TAG, "shouldn't be possible to have non-zero-one in SplitAdapterListener")
-    }
-  }
-}
 
 abstract class Large(activity:LinkStorageActivity) extends LayoutMgr(activity) {
   //the listener for items being clicked in the list 

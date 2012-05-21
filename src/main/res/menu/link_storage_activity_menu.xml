@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/menu_new"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="New file"/>
+    <item android:id="@+id/menu_load"
+        android:icon="@android:drawable/ic_menu_gallery"
+        android:title="Open file"/>
+    <item android:id="@+id/menu_save"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="Save file"/>
+    <item android:id="@+id/menu_save_as"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="Save file as"/>
+    <item android:id="@+id/menu_help"
+        android:icon="@android:drawable/ic_menu_help"
+        android:title="Help"/>
+</menu>

@@ -1,6 +1,7 @@
 package local.nodens.linkstorage
 import browser._
 import layout._
+import files._
 
 import android.app._
 import android.os.Bundle
@@ -15,76 +16,57 @@ import android.util.Log
 import scala.collection.mutable.Stack
 import ActionBar.OnNavigationListener
 
+import scalaz._
+import Scalaz._
+
 @EnhanceStrings
 class LinkStorageActivity extends Activity {
-  val loader = new DocLocLoader(this)
+  val fileMgr = new FileMgr(this)
 
   var layoutMgr:Option[LayoutMgr] = None
   private var mDoc:Document = Document()
-  private var docLoc:DocLocation = NoLoadedDoc
 
   private val browse = Stack.empty[SecStackItem]
 
   def current = browse.headOption getOrElse(SecStackItem.fromDoc(mDoc))
-
-  def onLoadFail(failure:LoadFail):Unit = Log.e(TAG, failure)
-
-  def loadDoc(loc:DocLocation, path:List[String], sis:Option[Bundle] = None):Unit = loader.load(loc) {
-    lDoc => { 
-      docLoc = loc //only store to docLoc if load was successful
-      doc = lDoc
-      path foreach (onSectionSelect(_))
-      layoutMgr foreach (_.restoreInstanceState(sis))
-    }
-  }(onLoadFail(_))
-
   def doc:Document = mDoc
-  def doc_=(newDoc:Document):Unit = { mDoc = newDoc;  browse.clear(); layoutMgr foreach (_.display(current)) }
+  def doc_=(newDoc:Document):Unit = enterDoc(newDoc, Nil)
   
-  def loadFilePref():Option[(DocLocation, List[String])] = None
+  def enterDoc(nDoc:Document, path:List[String]) = {
+    mDoc = nDoc
+    enter(path)
+  }
 
+  def enter(path:List[String]) = {
+    browse.clear()
+    path.scanLeft(Nil:List[String])(_ :+ _) foreach {
+      p => browse.push(SecStackItem.fromManipulator(mDoc /~ p))
+    }
+    getActionBar.setDisplayHomeAsUpEnabled(browse isEmpty)
+    layoutMgr foreach (_.display(current))
+  }
+  
   /** Called when the activity is first created. */
   override def onCreate(savedInstanceState:Bundle) = {
     super.onCreate(savedInstanceState)
-    val default = (StaticDoc(R.raw.testfile), Nil)
-    val sis = Option(savedInstanceState) 
-    val (loc, path) = sis map (extractSIS _) orElse loadFilePref() getOrElse (default)
-    Log.d(TAG, "onCreate extract loc: #loc.toString and path #path.toString")
+    val onSIS = (sis:Bundle) => {
+      val path = sis extractStringList kSISPath
+      fileMgr.restoreInstanceDoc(sis)(enterDoc(_, path))
+    }
     layoutMgr = Some(getLayout)
     layoutMgr map (_.prepareView) foreach (setContentView(_))
-    loadDoc(loc, path, sis)
+    Option(savedInstanceState) |>| onSIS
   }
   
   override def onResume() = {
     super.onRestart()
     layoutMgr foreach (_.display(current))
   }
-
-  def extractSIS(sis:Bundle):(DocLocation, List[String]) = {
-    val loc = (sis getString kSISDocType) match {
-      case SIS_DOC_TYPE_STATIC => StaticDoc(sis.getInt(kSISDocID))
-      case SIS_DOC_TYPE_EXTERN => ExternalDoc(sis.getString(kSISDocFile))
-      case _ => NoLoadedDoc
-    }
-    val path = sis extractStringList kSISPath
-    (loc, path)
-  }
   
   override def onSaveInstanceState(outSIS:Bundle):Unit = {
     //super.onSaveInstanceState(outSIS)
+    fileMgr.onSaveInstanceState(outSIS)
     layoutMgr foreach (_.onSaveInstanceState(outSIS))
-    docLoc match {
-      case StaticDoc(id) => {
-        outSIS.putInt(kSISDocID, id)
-        outSIS.putString(kSISDocType, SIS_DOC_TYPE_STATIC)
-      }
-      case ExternalDoc(path) => {
-        outSIS.putString(kSISDocFile, path)
-        outSIS.putString(kSISDocType, SIS_DOC_TYPE_EXTERN)
-      }
-      case NoLoadedDoc => { }
-    }
-    outSIS.putStringList(kSISPath, current.path)
   }
 
   def pushSection(path:List[String]) = {
@@ -136,14 +118,20 @@ class LinkStorageActivity extends Activity {
     else getActionBar.setDisplayHomeAsUpEnabled(false)
   }
 
-  override def onOptionsItemSelected(item:MenuItem) = {
-    item.getItemId match {
-      case android.R.id.home => {
-        goBack()
-        true
-      }
-      case _ => super.onOptionsItemSelected(item)
-    }
+  private val menuDispatch:PartialFunction[Int, Unit] = {
+    case android.R.id.home => goBack()
+    case R.id.menu_new => enterDoc(Document(), Nil)
+    case R.id.menu_load => (new LoadFile(this)).show(getFragmentManager, "load")
+    case R.id.menu_save => fileMgr.saveNow(doc)
+    case R.id.menu_save_as => (new SaveFileAs(this)).show(getFragmentManager, "saveas")
+    //todo change this to actual helpfile
+    case R.id.menu_help => fileMgr.doLoadRaw(R.raw.testfile)(enterDoc(_, Nil))
+  }
+  override def onOptionsItemSelected(item:MenuItem) = (menuDispatch lift item.getItemId) ? true | super.onOptionsItemSelected(item)
+
+  override def onCreateOptionsMenu(menu:Menu):Boolean = {
+    getMenuInflater.inflate(R.menu.link_storage_activity_menu, menu)
+    true
   }
 
   override def onBackPressed() = if (browse nonEmpty) goBack() else super.onBackPressed()
